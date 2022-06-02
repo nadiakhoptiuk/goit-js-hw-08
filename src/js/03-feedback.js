@@ -2,14 +2,14 @@ import throttle from 'lodash.throttle';
 
 const KEY_STORAGE = 'feedback-form-state';
 
-// об'єкт, в якому будемо зберігати значення, введені в поля
-const formData = {};
-
 const refs = {
   form: document.querySelector('.feedback-form'),
-  emailInput: document.querySelector('input'),
-  messageInput: document.querySelector('textarea'),
 };
+
+// об'єкт, в якому будемо зберігати значення, введені в поля
+const dataObjectFromStorage = localStorage.getItem(KEY_STORAGE);
+
+let formData = dataObjectFromStorage ? JSON.parse(dataObjectFromStorage) : {};
 
 refs.form.addEventListener('input', throttle(onFormInput, 500));
 refs.form.addEventListener('submit', onFormSubmit);
@@ -19,9 +19,15 @@ populateInputs();
 
 // функція, яка записує в локальне сховище введені в поля дані
 function onFormInput(evt) {
-  formData[evt.target.name] = evt.target.value;
+  const { name, value } = evt.target;
+  formData[name] = value;
 
-  localStorage.setItem(KEY_STORAGE, JSON.stringify(formData));
+  try {
+    localStorage.setItem(KEY_STORAGE, JSON.stringify(formData));
+  } catch (error) {
+    console.log(error.name);
+    console.log(error.message);
+  }
 }
 
 //функція, яка запускається при відправленні форми
@@ -31,14 +37,18 @@ function onFormSubmit(evt) {
   console.log(formData);
   evt.currentTarget.reset();
   localStorage.removeItem(KEY_STORAGE);
+  formData = {};
 }
 
 //функція, яка перевіряє стан локального сховища та записує в поля значення з нього
 function populateInputs() {
-  const savedValues = JSON.parse(localStorage.getItem(KEY_STORAGE));
+  const dataArray = Object.entries(formData);
 
-  if (savedValues) {
-    refs.emailInput.value = savedValues.email;
-    refs.messageInput.value = savedValues.message;
+  if (dataArray.length === 0) {
+    return;
   }
+
+  dataArray.forEach(([name, value]) => {
+    refs.form.elements[name].value = value;
+  });
 }
